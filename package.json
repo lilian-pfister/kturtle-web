@@ -1,0 +1,21 @@
+{
+  "name": "kturtle-web",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@codemirror/commands": "^6",
+    "@codemirror/language": "^6",
+    "@codemirror/state": "^6",
+    "@codemirror/view": "^6",
+    "@lezer/highlight": "^1"
+  },
+  "devDependencies": {
+    "vite": "^5",
+    "vite-plugin-singlefile": "^2"
+  }
+}

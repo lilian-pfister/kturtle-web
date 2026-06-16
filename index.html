@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KTurtle Web</title>
+</head>
+<body>
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <button id="btn-run">▶ Run</button>
+    <button id="btn-step">⏭ Step</button>
+    <button id="btn-stop" disabled>■ Stop</button>
+    <button id="btn-reset">↺ Reset</button>
+
+    <div class="sep"></div>
+
+    <label>Speed:</label>
+    <select id="sel-speed">
+      <option value="fullnh">Full speed, no highlight</option>
+      <option value="full">Full speed</option>
+      <option value="slow">Slow</option>
+      <option value="slower">Slower</option>
+      <option value="slowest">Slowest</option>
+      <option value="step">Step by step</option>
+    </select>
+
+    <div class="sep"></div>
+
+    <label>Language:</label>
+    <select id="sel-lang"></select>
+
+    <div class="sep"></div>
+
+    <label>Theme:</label>
+    <select id="sel-theme">
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+    </select>
+
+    <div class="sep"></div>
+
+    <label>Turtle:</label>
+    <select id="sel-shape">
+      <option value="arrow">Arrow</option>
+      <option value="turtle">Turtle</option>
+      <option value="circle">Circle</option>
+      <option value="mouse">Mouse</option>
+    </select>
+
+    <div class="sep"></div>
+
+    <select id="sel-example"></select>
+
+    <div class="sep"></div>
+
+    <button id="btn-open">Open…</button>
+    <a id="btn-save" download="script.turtle">Save as…</a>
+  </div>
+
+  <!-- Main area -->
+  <div id="main">
+    <!-- Left: editor + error panel -->
+    <div id="editor-pane">
+      <div id="editor-wrap"></div>
+      <div id="error-panel" class="idle">Ready.</div>
+    </div>
+
+    <div id="divider"></div>
+
+    <!-- Right: canvas -->
+    <div id="canvas-pane">
+      <div id="canvas-wrap">
+        <canvas id="canvas-draw"></canvas>
+        <canvas id="canvas-turtle"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
