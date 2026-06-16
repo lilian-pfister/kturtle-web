@@ -47,11 +47,13 @@ function updateCanvasZoom() {
   const availW = canvasPane.clientWidth  - 20;
   const availH = canvasPane.clientHeight - 20;
   if (availW <= 0 || availH <= 0) return;
-  const cw = drawCanvas.width;
-  const ch = drawCanvas.height;
+  const cw = renderer.logicalW || DEFAULT_CANVAS_W;
+  const ch = renderer.logicalH || DEFAULT_CANVAS_H;
   const scale = Math.min(availW / cw, availH / ch);
   const displayW = Math.round(cw * scale);
   const displayH = Math.round(ch * scale);
+
+  renderer.setDisplaySize(displayW, displayH);
 
   drawCanvas.style.width    = displayW + 'px';
   drawCanvas.style.height   = displayH + 'px';
@@ -67,13 +69,9 @@ window.addEventListener('resize', updateCanvasZoom);
 
 // ── Init canvas ──
 function initCanvas() {
-  drawCanvas.width    = DEFAULT_CANVAS_W;
-  drawCanvas.height   = DEFAULT_CANVAS_H;
-  turtleCanvas.width  = DEFAULT_CANVAS_W;
-  turtleCanvas.height = DEFAULT_CANVAS_H;
-  renderer.clearCanvas(turtle.canvasColorStr);
-  renderer.drawTurtle(turtle);
+  renderer.init(DEFAULT_CANVAS_W, DEFAULT_CANVAS_H, turtle.canvasColorStr);
   updateCanvasZoom();
+  renderer.drawTurtle(turtle);
 }
 
 // ── Editor init ──
@@ -109,10 +107,17 @@ divider.addEventListener('mousedown', (e) => {
   const startX = e.clientX;
   const startW = edPane.offsetWidth;
 
+  let _dragRaf = null;
   function onMove(e) {
     const newW = Math.max(180, Math.min(startW + e.clientX - startX, window.innerWidth - 200));
     edPane.style.width = newW + 'px';
-    updateCanvasZoom();
+    if (!_dragRaf) {
+      _dragRaf = requestAnimationFrame(() => {
+        _dragRaf = null;
+        updateCanvasZoom();
+        renderer.drawTurtle(turtle);
+      });
+    }
   }
 
   function onUp() {
@@ -215,7 +220,7 @@ async function run(stepMode = false) {
 
   const exec = new Executor(turtle, renderer, {
     abortSignal: abortCtrl.signal,
-    onResize: updateCanvasZoom,
+    onResize: () => { updateCanvasZoom(); renderer.drawTurtle(turtle); },
     onStep: async (line) => {
       const mode = selSpeed.value;
       const speed = SPEEDS[mode] ?? 0;
@@ -300,8 +305,8 @@ btnReset.addEventListener('click', () => {
   turtle.reset();
   renderer.resize(turtle.canvasW, turtle.canvasH);
   renderer.clearCanvas(turtle.canvasColorStr);
-  renderer.drawTurtle(turtle);
   updateCanvasZoom();
+  renderer.drawTurtle(turtle);
   showIdle('Ready.');
 });
 

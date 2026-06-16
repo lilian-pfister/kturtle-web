@@ -5,6 +5,10 @@ export class Renderer {
     this.dctx = drawCanvas.getContext('2d');
     this.tctx = turtleCanvas.getContext('2d');
     this.turtleShape = 'arrow';
+    this.logicalW = 0;
+    this.logicalH = 0;
+    this._bgColor = 'rgb(255,255,255)';
+    this._history = []; // retained drawing list for redraw-on-resize
 
     // Offscreen canvas for high-res sprite rendering.
     // Sprite is drawn at SCALE× and blitted down to RADIUS*2 px on the turtle canvas.
@@ -16,20 +20,73 @@ export class Renderer {
     this._sprite.height = sz;
   }
 
+  // Called once at startup to set logical size and clear state.
+  // Sets a provisional 1:1 pixel buffer; updateCanvasZoom must follow to set the real one.
+  init(w, h, bgColor) {
+    this.logicalW = w;
+    this.logicalH = h;
+    this._bgColor = bgColor || 'rgb(255,255,255)';
+    this._history = [];
+    this.dc.width  = w;
+    this.dc.height = h;
+    this.tc.width  = w;
+    this.tc.height = h;
+  }
+
+  // Called when canvassize or reset changes the logical canvas size.
+  // Callers follow with clearCanvas() then onResize() → updateCanvasZoom().
   resize(w, h) {
-    const img = this.dctx.getImageData(0, 0, this.dc.width, this.dc.height);
-    this.dc.width = w; this.dc.height = h;
-    this.tc.width = w; this.tc.height = h;
-    try { this.dctx.putImageData(img, 0, 0); } catch (_) {}
+    this.logicalW = w;
+    this.logicalH = h;
+  }
+
+  // Called by updateCanvasZoom. Sets pixel buffer to displayW×displayH at devicePixelRatio,
+  // applies the logical-to-physical transform, and redraws the full history.
+  setDisplaySize(displayW, displayH) {
+    const dpr = window.devicePixelRatio || 1;
+    this.dc.width  = Math.round(displayW * dpr);
+    this.dc.height = Math.round(displayH * dpr);
+    this.tc.width  = Math.round(displayW * dpr);
+    this.tc.height = Math.round(displayH * dpr);
+    this._applyTransform();
+    this._redraw();
+  }
+
+  _applyTransform() {
+    if (!this.logicalW || !this.logicalH) return;
+    const sx = this.dc.width  / this.logicalW;
+    const sy = this.dc.height / this.logicalH;
+    this.dctx.setTransform(sx, 0, 0, sy, 0, 0);
+    this.tctx.setTransform(sx, 0, 0, sy, 0, 0);
+  }
+
+  _redraw() {
+    // Fill background in physical pixel space (bypass the logical transform)
+    this.dctx.save();
+    this.dctx.setTransform(1, 0, 0, 1, 0, 0);
+    this.dctx.fillStyle = this._bgColor;
+    this.dctx.fillRect(0, 0, this.dc.width, this.dc.height);
+    this.dctx.restore();
+    // Replay every drawing operation in logical coordinate space
+    for (const item of this._history) {
+      if (item.type === 'seg') this._drawSegmentDirect(item);
+      else                     this._printTextDirect(item);
+    }
   }
 
   clearCanvas(color) {
-    this.dctx.fillStyle = color;
-    this.dctx.fillRect(0, 0, this.dc.width, this.dc.height);
+    this._bgColor = color;
+    this._history = [];
+    this._redraw();
   }
 
   drawSegment(seg) {
     if (!seg) return;
+    this._history.push({ type: 'seg', ...seg });
+    this._drawSegmentDirect(seg);
+  }
+
+  _drawSegmentDirect(seg) {
     const ctx = this.dctx;
     ctx.beginPath();
     ctx.moveTo(seg.x1, seg.y1);
@@ -41,6 +98,12 @@ export class Renderer {
   }
 
   printText(x, y, text, fontSize, colorStr) {
+    const item = { type: 'text', x, y, text, fontSize, colorStr };
+    this._history.push(item);
+    this._printTextDirect(item);
+  }
+
+  _printTextDirect({ x, y, text, fontSize, colorStr }) {
     const ctx = this.dctx;
     ctx.font = `${fontSize}px sans-serif`;
     ctx.fillStyle = colorStr;
@@ -49,7 +112,7 @@ export class Renderer {
 
   drawTurtle(state) {
     const ctx = this.tctx;
-    ctx.clearRect(0, 0, this.tc.width, this.tc.height);
+    ctx.clearRect(0, 0, this.logicalW, this.logicalH);
     if (!state.visible) return;
 
     const R  = this._RADIUS;
